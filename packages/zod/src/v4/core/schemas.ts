@@ -275,6 +275,8 @@ export const $ZodType: core.$constructor<$ZodType> = /*@__PURE__*/ core.$constru
       return inst._zod.parse(checkResult, ctx);
     };
 
+    const singleCheck = checks.length === 1 && !checks[0]._zod.def.when ? checks[0] : undefined;
+
     inst._zod.run = (payload, ctx) => {
       if (ctx.skipChecks) {
         return inst._zod.parse(payload, ctx);
@@ -298,6 +300,20 @@ export const $ZodType: core.$constructor<$ZodType> = /*@__PURE__*/ core.$constru
       if (result instanceof Promise) {
         if (ctx.async === false) throw new core.$ZodAsyncError();
         return result.then((result) => runChecks(result, checks, ctx));
+      }
+
+      /* fast path for the very common single unconditional check:
+       * skips the generic loop and its post-check abort bookkeeping,
+       * which only matters when further checks follow */
+      if (singleCheck) {
+        if (!util.aborted(result)) {
+          const checkResult = singleCheck._zod.check(result as any) as unknown;
+          if (checkResult instanceof Promise) {
+            if (ctx.async === false) throw new core.$ZodAsyncError();
+            return checkResult.then(() => result);
+          }
+        }
+        return result;
       }
 
       return runChecks(result, checks, ctx);

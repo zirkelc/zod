@@ -859,11 +859,17 @@ export function finalizeIssue(
       unwrapMessage(config.localeError?.(iss)) ??
       "Invalid input");
 
-  const { inst: _inst, continue: _continue, input: _input, ...rest } = iss as any;
+  /* manual copy instead of a rest-spread destructure; skips the
+   * internal-only keys without the generic object-rest machinery */
+  const rest: any = {};
+  for (const k in iss) {
+    if (k === "inst" || k === "continue" || k === "input") continue;
+    rest[k] = (iss as any)[k];
+  }
   rest.path ??= [];
   rest.message = message;
   if (ctx?.reportInput) {
-    rest.input = _input;
+    rest.input = (iss as any).input;
   }
   return rest;
 }

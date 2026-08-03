@@ -31,11 +31,14 @@ export /*@__NO_SIDE_EFFECTS__*/ function $constructor<T extends ZodTrait, D = T[
       });
     }
 
-    if (inst._zod.traits.has(name)) {
+    /* single-lookup membership test: if the size is unchanged after
+     * `add`, the trait was already present */
+    const traits = inst._zod.traits;
+    const size = traits.size;
+    traits.add(name);
+    if (traits.size === size) {
       return;
     }
-
-    inst._zod.traits.add(name);
 
     initializer(inst, def);
 
